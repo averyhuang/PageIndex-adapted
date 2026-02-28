@@ -171,7 +171,6 @@ def get_nodes(structure):
     if isinstance(structure, dict):
         structure_node = copy.deepcopy(structure)
         structure_node.pop('nodes', None)
-        nodes = [structure_node]
         for key in list(structure.keys()):
             if 'nodes' in key:
                 nodes.extend(get_nodes(structure[key]))
@@ -603,12 +602,15 @@ def add_node_text_with_labels(node, pdf_pages):
 
 
 async def generate_node_summary(node, model=None):
+    # print(node['text'][:100])  # Print first 100 characters of text for debugging
     prompt = f"""You are given a part of a document, your task is to generate a description of the partial document about what are main points covered in the partial document.
+    Make the summary comprehensive and cover all main points in detail.
 
     Partial Document Text: {node['text']}
     
     Directly return the description, do not include any other text.
     """
+
     response = await ChatGPT_API_async(model, prompt)
     return response
 
@@ -710,3 +712,32 @@ class ConfigLoader:
         self._validate_keys(user_dict)
         merged = {**self._default_dict, **user_dict}
         return config(**merged)
+
+
+
+def create_node_mapping(json_doc):
+    """
+    Creates a flat dictionary mapping node_id to node object from hierarchical document structure.
+    
+    Args:
+        json_doc: Dictionary with 'structure' key containing hierarchical nodes
+        
+    Returns:
+        Dictionary mapping node_id (4-digit string) to node object
+    """
+    node_map = {}
+    
+    def traverse_nodes(nodes):
+        """Recursively traverse nodes and add to mapping"""
+        for node in nodes:
+            if 'node_id' in node:
+                node_map[node['node_id']] = node
+            # Recursively process child nodes if they exist
+            if 'nodes' in node:
+                traverse_nodes(node['nodes'])
+    
+    # Start traversal from the structure
+    if 'structure' in json_doc:
+        traverse_nodes(json_doc['structure'])
+    
+    return node_map
