@@ -1004,10 +1004,12 @@ async def process_large_node_recursively(node, page_list, opt=None, logger=None)
         
         if valid_node_toc_items and node['title'].strip() == valid_node_toc_items[0]['title'].strip():
             node['nodes'] = post_processing(valid_node_toc_items[1:], node['end_index'])
-            node['end_index'] = valid_node_toc_items[1]['start_index'] if len(valid_node_toc_items) > 1 else node['end_index']
+            if len(valid_node_toc_items) > 1:
+                node['end_index'] = max(valid_node_toc_items[1]['start_index'], node['start_index'])
         else:
             node['nodes'] = post_processing(valid_node_toc_items, node['end_index'])
-            node['end_index'] = valid_node_toc_items[0]['start_index'] if valid_node_toc_items else node['end_index']
+            if valid_node_toc_items:
+                node['end_index'] = max(valid_node_toc_items[0]['start_index'], node['start_index'])
         
     if 'nodes' in node and node['nodes']:
         tasks = [

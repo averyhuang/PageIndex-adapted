@@ -19,10 +19,20 @@ from types import SimpleNamespace as config
 
 CHATGPT_API_KEY = os.getenv("CHATGPT_API_KEY")
 
+
+def get_encoding_for_model(model):
+    """Get tiktoken encoding for model, with fallback for newer models."""
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+        # Fallback to o200k_base encoding for newer models (GPT-4o, GPT-5, etc.)
+        print(f"Warning: Model '{model}' not recognized by tiktoken, using o200k_base encoding")
+        return tiktoken.get_encoding("o200k_base")
+
 def count_tokens(text, model=None):
     if not text:
         return 0
-    enc = tiktoken.encoding_for_model(model)
+    enc = get_encoding_for_model(model)
     tokens = enc.encode(text)
     return len(tokens)
 
@@ -603,8 +613,14 @@ def add_node_text_with_labels(node, pdf_pages):
 
 async def generate_node_summary(node, model=None):
     # print(node['text'][:100])  # Print first 100 characters of text for debugging
-    prompt = f"""You are given a part of a document, your task is to generate a description of the partial document about what are main points covered in the partial document.
-    Make the summary comprehensive and cover all main points in detail.
+    
+    # Include node title to provide context and differentiate sibling nodes
+    node_title = node.get('title', 'Untitled Section')
+    prompt = f"""You are given a part of a document with the following section title.
+    Your task is to generate a comprehensive description of what main points are covered in this specific section.
+    Focus on the key information relevant to this section title.
+    
+    Section Title: {node_title}
 
     Partial Document Text: {node['text']}
     
